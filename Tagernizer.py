@@ -1,3 +1,5 @@
+import os
+import glob
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm, inch
 
@@ -20,7 +22,7 @@ LINE_WIDTH = STANDARD_72*1./RESOLUTION
 #Printers can show some offset when printing page (you can mesure it printing the result of draw_outline)
 #A positive offset means the printed dot is further away on the positive axis from the theoritical dot.
 #hp psc2355
-PRINTER_OFFSET = (0.*mm, -1.*mm)
+PRINTER_OFFSET = (0.75*mm, -1.*mm)
 
 #standard A4
 PAGE_WIDTH = 210.*mm
@@ -115,3 +117,14 @@ def insert_image(canvas, image_file, row, col):
             PAGE_HEIGHT - (M_TOP + row*LABEL_VPERIOD + v_padding/2 + height))
 
     canvas.drawImage(image_file, *lower_left_corner, width=width, height=height)
+
+def generate_labels_page(directory, extension, cardinality=2, first_available_label=(0, 0), output_canvas=None, output_filename="labels.pdf"):
+    if output_canvas==None:
+        output_canvas = canvas.Canvas(os.path.join(directory, output_filename))
+
+    files = [file for file in glob.glob(os.path.join(directory, '*.'+extension)) for i in range(cardinality)]
+    for label_id, label_file in zip(range(len(files)), files):
+        insert_image(output_canvas, label_file, label_id/LABEL_HCOUNT, label_id%LABEL_HCOUNT)
+
+    output_canvas.save()
+    return output_canvas
