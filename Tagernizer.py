@@ -5,6 +5,8 @@ from reportlab.lib.units import mm, inch
 
 from PIL import Image
 
+import argparse
+
 """ Tagernizer is a collection of helpers to organize rectangulars tags (images) on whites labels paper
  and generate a PDF.
 Important remarks : the API uses ReportLab coordinate system, with origin at the BOTTOM-left, positive x axis going to the right of the page, and positive y axis going up.
@@ -22,7 +24,7 @@ LINE_WIDTH = STANDARD_72*1./RESOLUTION
 #Printers can show some offset when printing page (you can mesure it printing the result of draw_outline)
 #A positive offset means the printed dot is further away on the positive axis from the theoritical dot.
 #hp psc2355
-PRINTER_OFFSET = (0.75*mm, -1.*mm)
+PRINTER_OFFSET = (0.6*mm, -1.*mm)
 
 #standard A4
 PAGE_WIDTH = 210.*mm
@@ -123,8 +125,18 @@ def generate_labels_page(directory, extension, cardinality=2, first_available_la
         output_canvas = canvas.Canvas(os.path.join(directory, output_filename))
 
     files = [file for file in glob.glob(os.path.join(directory, '*.'+extension)) for i in range(cardinality)]
-    for label_id, label_file in zip(range(len(files)), files):
+    first_label_id = first_available_label[0]*LABEL_HCOUNT  + first_available_label[1]
+    for label_id, label_file in zip([x+first_label_id for x in range(len(files))], files):
         insert_image(output_canvas, label_file, label_id/LABEL_HCOUNT, label_id%LABEL_HCOUNT)
 
     output_canvas.save()
     return output_canvas
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Generate a ready to print PDF file presenting all tags from a given folder.')
+    parser.add_argument('directory', help='The directory containing all tags to be processed')
+    parser.add_argument('--col', type=int, default = 0, help='column of the first free label (zero based index)')
+    parser.add_argument('--row', type=int, default = 0, help='row of the first free label (zero based index)')
+    args = parser.parse_args()
+
+    generate_labels_page(args.directory, 'png', first_available_label=(args.row, args.col))
