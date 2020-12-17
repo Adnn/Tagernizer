@@ -1,4 +1,4 @@
-#! /usr/bin/python 
+#!/usr/bin/env python3
 
 import os
 import glob
@@ -7,7 +7,7 @@ from reportlab.lib.units import mm, inch
 
 from PIL import Image
 
-import argparse
+import argparse, math
 
 """ Tagernizer is a collection of helpers to organize rectangulars tags (images) on whites labels paper
  and generate a PDF.
@@ -34,10 +34,10 @@ PAGE_HEIGHT = 297.*mm
 
 #DECAdry DLW1736 (48 labels/page) paper layout, in mm :
 # margins : top 20.6 bottom 22 left/right : 10
-M_TOP=20.6*mm + PRINTER_OFFSET[1]
-M_BOTTOM=22.*mm - PRINTER_OFFSET[1]
-M_LEFT=10.*mm -  PRINTER_OFFSET[0]
-M_RIGHT=10.*mm + PRINTER_OFFSET[0]
+LABEL_MARGIN_TOP=20.6*mm + PRINTER_OFFSET[1]
+LABEL_MARGIN_BOTTOM=22.*mm - PRINTER_OFFSET[1]
+LABEL_MARGIN_LEFT=10.*mm -  PRINTER_OFFSET[0]
+LABEL_MARGIN_RIGHT=10.*mm + PRINTER_OFFSET[0]
 
 LABEL_WIDTH = 45.7*mm
 LABEL_HEIGHT = 21.2*mm
@@ -51,10 +51,10 @@ LABEL_HCOUNT = 4
 LABEL_VCOUNT = 12
 
 #The corners of the print zone (top-left, top-right, bottom-righ, bottom-left)
-A = (M_LEFT, PAGE_HEIGHT-M_TOP)
-B = (PAGE_WIDTH-M_RIGHT, PAGE_HEIGHT-M_TOP)
-C = (PAGE_WIDTH-M_RIGHT, M_BOTTOM)
-D = (M_LEFT, M_BOTTOM)
+A = (LABEL_MARGIN_LEFT, PAGE_HEIGHT-LABEL_MARGIN_TOP)
+B = (PAGE_WIDTH-LABEL_MARGIN_RIGHT, PAGE_HEIGHT-LABEL_MARGIN_TOP)
+C = (PAGE_WIDTH-LABEL_MARGIN_RIGHT, LABEL_MARGIN_BOTTOM)
+D = (LABEL_MARGIN_LEFT, LABEL_MARGIN_BOTTOM)
 
 def draw_outline(canvas):
     canvas.saveState()
@@ -104,8 +104,9 @@ def draw_cells(canvas):
 
     canvas.restoreState()
 
-def insert_image(canvas, image_file, row, col):
+def insert_image(canvas, image_file, col, row):
     image = Image.open(image_file)
+    # Image dimension in mm at printer's DPI
     width, height = [(float(dim))/RESOLUTION*inch for dim in image.size]
 
     if width>LABEL_WIDTH or height>LABEL_HEIGHT:
@@ -117,8 +118,8 @@ def insert_image(canvas, image_file, row, col):
     v_padding = LABEL_HEIGHT - height
     h_padding = LABEL_WIDTH - width
     lower_left_corner = (
-            M_LEFT + col*LABEL_HPERIOD + h_padding/2,
-            PAGE_HEIGHT - (M_TOP + row*LABEL_VPERIOD + v_padding/2 + height))
+            LABEL_MARGIN_LEFT + col*LABEL_HPERIOD + h_padding/2,
+            PAGE_HEIGHT - (LABEL_MARGIN_TOP + row*LABEL_VPERIOD + v_padding/2 + height))
 
     canvas.drawImage(image_file, *lower_left_corner, width=width, height=height)
 
@@ -127,9 +128,9 @@ def generate_labels_page(directory, extension, cardinality=2, first_available_la
         output_canvas = canvas.Canvas(os.path.join(directory, output_filename))
 
     files = [file for file in glob.glob(os.path.join(directory, '*.'+extension)) for i in range(cardinality)]
-    first_label_id = first_available_label[0]*LABEL_HCOUNT  + first_available_label[1]
+    first_label_id = first_available_label[1]*LABEL_HCOUNT  + first_available_label[0]
     for label_id, label_file in zip([x+first_label_id for x in range(len(files))], files):
-        insert_image(output_canvas, label_file, label_id/LABEL_HCOUNT, label_id%LABEL_HCOUNT)
+        insert_image(output_canvas, label_file, label_id%LABEL_HCOUNT, math.floor(label_id/LABEL_HCOUNT))
 
     output_canvas.save()
     return output_canvas
@@ -141,4 +142,4 @@ if __name__ == '__main__':
     parser.add_argument('--row', type=int, default = 0, help='row of the first free label (zero based index)')
     args = parser.parse_args()
 
-    generate_labels_page(args.directory, 'png', first_available_label=(args.row, args.col))
+    generate_labels_page(args.directory, 'png', first_available_label=(args.col, args.row))
