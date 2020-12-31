@@ -25,11 +25,15 @@ LINE_WIDTH = STANDARD_72*1./RESOLUTION
 
 # Printers can show some offset when printing page (you can mesure it printing the result of draw_outline)
 # A positive offset means the printed dot is further away on the positive axis from the theoritical dot.
+# i.e. a positive offset on both axis will move the print toward the bottom left of the paper
+# The offset is taken at maximum ppp of the printer (the offset in not necessarily the same at different resolutions)
 PRINTERS = {
     # No offset
     "ideal": (0., 0.),
     # hp psc2355
     "hp-psc2355": (0.6*mm, -1.*mm),
+    # hp office jet pro 6970
+    "hp-6970": (0.4*mm, 1.9*mm),
 }
 
 # standard A4
@@ -149,11 +153,18 @@ def generate_labels_page(args, extension, output_canvas=None, output_filename="l
 
     printzone = get_printable_corners(PRINTERS[args.printer])
     first_available_label=(args.col, args.row)
+    page = 0
 
-    files = [file for file in glob.glob(os.path.join(args.directory, '*.'+extension)) for i in range(args.repeat)]
+    files = [file for file in sorted(glob.glob(os.path.join(args.directory, '*.'+extension)))
+                    for i in range(args.repeat)]
     first_label_id = first_available_label[1]*LABEL_HCOUNT  + first_available_label[0]
     for label_id, label_file in zip([x+first_label_id for x in range(len(files))], files):
-        insert_image(output_canvas, printzone, label_file, label_id%LABEL_HCOUNT, math.floor(label_id/LABEL_HCOUNT))
+        row = math.floor(label_id/LABEL_HCOUNT) - page*LABEL_VCOUNT
+        if row >= LABEL_VCOUNT:
+            output_canvas.showPage()
+            page += 1
+            row -= LABEL_VCOUNT
+        insert_image(output_canvas, printzone, label_file, label_id%LABEL_HCOUNT, row)
 
     if args.print_guides:
         draw_outline(output_canvas, printzone)
@@ -166,7 +177,7 @@ def generate_labels_page(args, extension, output_canvas=None, output_filename="l
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a ready to print PDF file presenting all tags from a given folder.')
     parser.add_argument('directory', help='The directory containing all tags to be processed')
-    parser.add_argument('printer', choices=["ideal", "hp-psc2355"], help='A printer from the list of hardcoded presets')
+    parser.add_argument('printer', choices=["ideal", "hp-psc2355", "hp-6970"], help='A printer from the list of hardcoded presets')
     parser.add_argument('--col', type=int, default = 0, help='column of the first free label (zero based index)')
     parser.add_argument('--row', type=int, default = 0, help='row of the first free label (zero based index)')
     parser.add_argument('--repeat', type=int, default = 2, help='cardinality for each label')
