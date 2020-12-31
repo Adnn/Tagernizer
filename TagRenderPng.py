@@ -14,24 +14,25 @@ def is_url(url):
         return False
 
 
-async def render(occurrence_id, destination_folder):
+async def render_list(destination_folder, *ids):
     """ The snake people call that a coroutine afaik """
-    tag_url = urllib.parse.urljoin(
-        args.origin,
-        "media/advideogame/occurrences/{}/tags/v2.html".format(occurrence_id))
-    if not is_url(tag_url):
-        print("Error: invalid url '{}'".format(tag_url))
-        return
-    options = {
-        "path": os.path.join(destination_folder, "tag_{}.png".format(occurrence_id)),
-        "fullPage": True
-    }
-
     browser = await launch()
     try:
         page = await browser.newPage()
-        await page.goto(tag_url)
-        await page.screenshot(options)
+        for occurrence_id in ids:
+            tag_url = urllib.parse.urljoin(
+                args.origin,
+                "media/advideogame/occurrences/{}/tags/v2.html".format(occurrence_id))
+            if not is_url(tag_url):
+                print("Error: invalid url '{}'".format(tag_url))
+                break
+            options = {
+                "path": os.path.join(destination_folder, "tag_{}.png".format(occurrence_id)),
+                "fullPage": True
+            }
+            response = await page.goto(tag_url)
+            if response.ok:
+                await page.screenshot(options)
     except Exception as e:
         print("Exception: {}".format(e))
     await browser.close()
@@ -41,7 +42,8 @@ async def main(args):
     """ Asynchronous entrypoint """
     first_id = args.occurrence_id
     last_id = args.until if args.until else first_id
-    await asyncio.gather(*[render(id, args.destination) for id in range(first_id, last_id+1)])
+    #await asyncio.gather(*[render(args.destination, id) for id in range(first_id, last_id+1)])
+    await render_list(args.destination, *range(first_id, last_id+1))
 
 
 if __name__ == '__main__':
