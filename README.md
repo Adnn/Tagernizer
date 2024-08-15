@@ -11,6 +11,7 @@ This is intended as a companion to [Collecster](https://github.com/Adnn/Collecst
     python3 -m venv venv
     source venv/bin/activate
     pip3 install -r requirements.txt
+    playwright install # Install browsers for playwright
     deactivate
 
 ## Usage

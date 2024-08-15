@@ -2,7 +2,7 @@
 import argparse, asyncio, os
 import urllib.parse
 
-from pyppeteer import launch
+from playwright.async_api import async_playwright
 
 
 def is_url(url):
@@ -16,26 +16,27 @@ def is_url(url):
 
 async def render_list(destination_folder, *ids):
     """ The snake people call that a coroutine afaik """
-    browser = await launch()
-    try:
-        page = await browser.newPage()
-        for occurrence_id in ids:
-            tag_url = urllib.parse.urljoin(
-                args.origin,
-                "media/advideogame/occurrences/{}/tags/v2.html".format(occurrence_id))
-            if not is_url(tag_url):
-                print("Error: invalid url '{}'".format(tag_url))
-                break
-            options = {
-                "path": os.path.join(destination_folder, "tag_{}.png".format(occurrence_id)),
-                "fullPage": True
-            }
-            response = await page.goto(tag_url)
-            if response.ok:
-                await page.screenshot(options)
-    except Exception as e:
-        print("Exception: {}".format(e))
-    await browser.close()
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        try:
+            page = await browser.new_page()
+            for occurrence_id in ids:
+                tag_url = urllib.parse.urljoin(
+                    args.origin,
+                    "media/advideogame/occurrences/{}/tags/v2.html".format(occurrence_id))
+                if not is_url(tag_url):
+                    print("Error: invalid url '{}'".format(tag_url))
+                    break
+                options = {
+                    "path": os.path.join(destination_folder, "tag_{}.png".format(occurrence_id)),
+                    "full_page": True
+                }
+                response = await page.goto(tag_url)
+                if response.ok:
+                    await page.screenshot(**options)
+        except Exception as e:
+            print("Exception: {}".format(e))
+        await browser.close()
 
 
 async def main(args):
