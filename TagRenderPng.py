@@ -65,4 +65,10 @@ if __name__ == '__main__':
     ## Simpler run is not used, because it sporadically errors on exit
     ##      RuntimeError: Event loop is closed
     #asyncio.run(main(args))
-    asyncio.get_event_loop().run_until_complete(main(args))
+    ## This is deprecated since Python 3.11, there is no current event loop
+    #asyncio.get_event_loop().run_until_complete(main(args))
+
+    # see: https://stackoverflow.com/a/73367187
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(main(args))
